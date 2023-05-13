@@ -1,34 +1,68 @@
-// Connect to Postgres using the node-postgres package
 
-const POOL = require('pg').Pool
+const { Pool } = require('pg');
 
-const pool = new POOL({
-  user: 'me',
+const pool = new Pool({
+  user: 'postgres',
   host: 'localhost',
-  database: 'expresslinks',
-  password: 'password',
+  database: 'links',
+  password: '1999',
   port: 5432,
-})
-
-// Create all the functions that will be our request handlers in our express server
-
-// Create a new link in the db
-
-// Read all the data from db
+});
 
 const getLinks = (req, res) => {
-  pool.query('SELECT * FROM links ORDER BY id ASC', (error, result) => {
+  pool.query('SELECT * FROM links ORDER BY id ASC', (error, results) => {
     if (error) {
-      throw error
+      throw error;
     }
-    res.status(200).json(result.rows)
-  })
-}
+    res.status(200).json(results.rows);
+  });
+};
 
-// Update link in the db
+const getLinkById = (req, res) => {
+  const id = parseInt(req.params.id);
+  pool.query('SELECT * FROM links WHERE id = $1', [id], (error, results) => {
+    if (error) {
+      throw error;
+    }
+    res.status(200).json(results.rows);
+  });
+};
 
-// Delete link in the db
+const createLink = (req, res) => {
+  const { name, url } = req.body;
+  pool.query('INSERT INTO links (name, url) VALUES ($1, $2)', [name, url], (error, results) => {
+    if (error) {
+      throw error;
+    }
+    res.status(201).send(`Link added with ID: ${results.insertId}`);
+  });
+};
+
+const updateLink = (req, res) => {
+  const id = parseInt(req.params.id);
+  const { name, url } = req.body;
+  pool.query('UPDATE links SET name = $1, url = $2 WHERE id = $3', [name, url, id], (error, results) => {
+    if (error) {
+      throw error;
+    }
+    res.status(200).send(`Link modified with ID: ${id}`);
+  });
+};
+
+const deleteLink = (req, res) => {
+  const id = parseInt(req.params.id);
+  pool.query('DELETE FROM links WHERE id = $1', [id], (error, results) => {
+    if (error) {
+      throw error;
+    }
+    res.status(200).send(`Link deleted with ID: ${id}`);
+  });
+};
 
 module.exports = {
   getLinks,
-}
+  getLinkById,
+  createLink,
+  updateLink,
+  deleteLink,
+};

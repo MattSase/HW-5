@@ -20,6 +20,40 @@ function App() {
 }
 
 
+// class LinkContainer extends React.Component {
+//   constructor(props) {
+//     super(props);
+//     this.state = {
+//       links: [],
+//     };
+//     this.addLink = this.addLink.bind(this);
+//     this.removeLink = this.removeLink.bind(this);
+//   }
+
+//   addLink(link) {
+//     this.setState((state) => ({
+//       links: [...state.links, link],
+//     }));
+//   }
+
+//   removeLink(link) {
+//     const index = this.state.links.indexOf(link);
+//     const newLinks = this.state.links.filter((_, i) => i !== index);
+//     this.setState({
+//       links: newLinks,
+//     });
+//   }
+
+//   render() {
+//     return (
+//       <div>
+//         <Form addLink={this.addLink} />
+//         <Table links={this.state.links} removeLink={this.removeLink} />
+//       </div>
+//     );
+//   }
+// }
+
 class LinkContainer extends React.Component {
   constructor(props) {
     super(props);
@@ -28,20 +62,53 @@ class LinkContainer extends React.Component {
     };
     this.addLink = this.addLink.bind(this);
     this.removeLink = this.removeLink.bind(this);
+    this.getLinks = this.getLinks.bind(this);
   }
 
-  addLink(link) {
-    this.setState((state) => ({
-      links: [...state.links, link],
-    }));
+  componentDidMount() {
+    this.getLinks();
   }
 
-  removeLink(link) {
-    const index = this.state.links.indexOf(link);
-    const newLinks = this.state.links.filter((_, i) => i !== index);
-    this.setState({
-      links: newLinks,
-    });
+  async getLinks() {
+    try {
+      const response = await fetch('/links');
+      const links = await response.json();
+      this.setState({ links });
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  }
+
+  async addLink(link) {
+    try {
+      const response = await fetch('/links', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(link),
+      });
+      if (response.ok) {
+        this.getLinks();  // Refresh the list of links
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  }
+
+  async removeLink(linkToRemove) {
+    try {
+      const response = await fetch(`/links/${linkToRemove.id}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        this.setState((state) => ({
+          links: state.links.filter((link) => link.id !== linkToRemove.id),
+        }));
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
   }
 
   render() {
