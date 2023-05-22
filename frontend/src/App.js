@@ -2,15 +2,6 @@
 
 import React, { useState } from 'react';
 
-// function App() {
-//   return (
-//     <div>
-//       <LinkContainer />
-
-//     </div>
-//   );
-// }
-
 function App() {
   return (
     <div className="container">
@@ -19,50 +10,16 @@ function App() {
   );
 }
 
-
-// class LinkContainer extends React.Component {
-//   constructor(props) {
-//     super(props);
-//     this.state = {
-//       links: [],
-//     };
-//     this.addLink = this.addLink.bind(this);
-//     this.removeLink = this.removeLink.bind(this);
-//   }
-
-//   addLink(link) {
-//     this.setState((state) => ({
-//       links: [...state.links, link],
-//     }));
-//   }
-
-//   removeLink(link) {
-//     const index = this.state.links.indexOf(link);
-//     const newLinks = this.state.links.filter((_, i) => i !== index);
-//     this.setState({
-//       links: newLinks,
-//     });
-//   }
-
-//   render() {
-//     return (
-//       <div>
-//         <Form addLink={this.addLink} />
-//         <Table links={this.state.links} removeLink={this.removeLink} />
-//       </div>
-//     );
-//   }
-// }
-
 class LinkContainer extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
       links: [],
+      securityQuestionAnswered: false,
     };
     this.addLink = this.addLink.bind(this);
     this.removeLink = this.removeLink.bind(this);
-    this.getLinks = this.getLinks.bind(this);
+    this.checkSecurityQuestion = this.checkSecurityQuestion.bind(this);
   }
 
   componentDidMount() {
@@ -80,42 +37,117 @@ class LinkContainer extends React.Component {
   }
 
   async addLink(link) {
-    try {
-      const response = await fetch('/links', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(link),
-      });
-      if (response.ok) {
-        this.getLinks();  // Refresh the list of links
+    if (this.state.securityQuestionAnswered) {
+      try {
+        const response = await fetch('/links', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(link),
+        });
+        if (response.ok) {
+          this.getLinks();
+        }
+      } catch (error) {
+        console.error('Error:', error);
       }
-    } catch (error) {
-      console.error('Error:', error);
+    } else {
+      alert('Please answer the security question before adding a link.');
     }
   }
 
   async removeLink(linkToRemove) {
-    try {
-      const response = await fetch(`/links/${linkToRemove.id}`, {
-        method: 'DELETE',
-      });
-      if (response.ok) {
-        this.setState((state) => ({
-          links: state.links.filter((link) => link.id !== linkToRemove.id),
-        }));
+    if (this.state.securityQuestionAnswered) {
+      try {
+        const response = await fetch(`/links/${linkToRemove.id}`, {
+          method: 'DELETE',
+        });
+        if (response.ok) {
+          this.setState((state) => ({
+            links: state.links.filter((link) => link.id !== linkToRemove.id),
+          }));
+        }
+      } catch (error) {
+        console.error('Error:', error);
       }
-    } catch (error) {
-      console.error('Error:', error);
+    } else {
+      alert('Please answer the security question before removing a link.');
     }
+  }
+
+  checkSecurityQuestion(answer) {
+    // Add your custom security question validation logic here
+    // For example, you can compare the answer to a predefined value
+    const correctAnswer = 'OpenAI';
+    const isAnswerCorrect = answer.toLowerCase() === correctAnswer.toLowerCase();
+    this.setState({ securityQuestionAnswered: isAnswerCorrect });
   }
 
   render() {
     return (
       <div>
-        <Form addLink={this.addLink} />
-        <Table links={this.state.links} removeLink={this.removeLink} />
+        {!this.state.securityQuestionAnswered && (
+          <SecurityQuestion checkSecurityQuestion={this.checkSecurityQuestion} />
+        )}
+        <Form
+          addLink={this.addLink}
+          securityQuestionAnswered={this.state.securityQuestionAnswered}
+        />
+        <Table
+          links={this.state.links}
+          removeLink={this.removeLink}
+          securityQuestionAnswered={this.state.securityQuestionAnswered}
+        />
+      </div>
+    );
+  }
+}
+
+class SecurityQuestion extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      answer: '',
+      error: null,
+    };
+    this.handleChange = this.handleChange.bind(this);
+    this.handleSubmit = this.handleSubmit.bind(this);
+  }
+
+  handleChange(event) {
+    const answer = event.target.value;
+    this.setState({ answer, error: null });
+  }
+
+  handleSubmit(event) {
+    event.preventDefault();
+    const { answer } = this.state;
+    if (answer.trim() === '') {
+      this.setState({ error: 'Please provide an answer.' });
+    } else {
+      this.props.checkSecurityQuestion(answer);
+      this.setState({ answer: '', error: null });
+    }
+  }
+
+  render() {
+    const { answer, error } = this.state;
+    return (
+      <div>
+        <h3>Security Question:</h3>
+        <form onSubmit={this.handleSubmit}>
+          <label>
+            Answer the security question: What is the capital of France?
+            <input
+              type="text"
+              value={answer}
+              onChange={this.handleChange}
+            />
+          </label>
+          <button type="submit">Submit</button>
+          {error && <div className="error">{error}</div>}
+        </form>
       </div>
     );
   }
@@ -174,7 +206,7 @@ class Form extends React.Component {
             onChange={this.handleChange}
           />
         </label>
-        <input type="submit" value="Add Link" />
+        <input type="submit" value="Add Link" disabled={!this.props.securityQuestionAnswered} />
       </form>
     );
   }
@@ -224,5 +256,9 @@ function TableBody(props) {
 }
 
 export default App;
+
+
+
+
 
 
